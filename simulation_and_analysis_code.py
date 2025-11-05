@@ -70,16 +70,7 @@ def bootstrap_hodges_lehmann(x, y, num_bootstrap):
 
 def analyse_treatment(pre, post, confidence_level, n_bootstrap):
     """
-    Analyse pre- and post-treatment data using bootstrap resampling.
-    
-    Parameters:
-        pre (list or array): Pre-treatment data.
-        post (list or array): Post-treatment data.
-        confidence_level (float): Confidence level for the bootstrap CI (default: 0.95).
-        n_bootstrap (int): Number of bootstrap samples to generate (default: 10,000).
-    
-    Returns:
-        dict: Analysis results in intuitive format.
+    Analyse pre- and post-treatment data using bootstrap resampling and HL estimation of each bootstrap sample.
     """
     pre = np.array(pre)
     post = np.array(post)
@@ -95,7 +86,6 @@ def analyse_treatment(pre, post, confidence_level, n_bootstrap):
     elif significant_decrease:
         result_text = "significant decrease"
     
-    # Results
     result = {
         'result': f"{result_text} of {observed_effect:.2f} (95% CI: {ci_lower:.2f}, {ci_upper:.2f})",
         'observed_difference': observed_effect,
@@ -108,20 +98,6 @@ def analyse_treatment(pre, post, confidence_level, n_bootstrap):
 def simulate_treatment_effect(pre_mean, sigma_epsilon, n_pre, n_post, dist_type, effect_sizes, effect_direction, n_simulations, n_bootstrap, simulations,include_severity_composite, confidence_level=0.95, clip_to_zero=True):
     """
     Simulate treatment effects and evaluate detection reliability.
-    
-    Parameters:
-        pre_mean (float): Mean of pre-treatment data.
-        pre_sd (float): Standard deviation of pre-treatment data.
-        n_pre (int): Sample size for pre-treatment group.
-        n_post (int): Sample size for post-treatment group.
-        effect_sizes (list): List of effect sizes (Cohen's d) to simulate.
-        confidence_level (float): Confidence level for bootstrap CI.
-        n_simulations (int): Number of simulations to run per effect size.
-        n_bootstrap (int): Number of bootstrap samples in each analysis.
-        clip_to_zero (boolean): set negative values to 0 e.g. for count data
-    
-    Returns:
-        dict: Simulation results with detection rates and effect size estimates.
     """
     proportions_increase = []
     proportions_decrease = []
@@ -148,7 +124,7 @@ def simulate_treatment_effect(pre_mean, sigma_epsilon, n_pre, n_post, dist_type,
             
             if clip_to_zero:
                 pre = np.clip(pre, 0, 30)  # Set negative values to 0 and cap at 30 days/month
-                post = np.clip(post, 0, 30)  # Set negative values to 0
+                post = np.clip(post, 0, 30) 
             
             # if including consideration of headache severity
             if include_severity_composite == 1:
@@ -221,19 +197,20 @@ def simulate_treatment_effect(pre_mean, sigma_epsilon, n_pre, n_post, dist_type,
     return  simulations
 
 # Specify paramaters
-pre_mean = 4
-sigma_epsilon = 3 # Random error standard deviation - level of variability due to random factors i.e. day-to-day fluctuations e.g. due to factors like stress, physical activity, or measurement inaccuracies
-dist_type = "negative_binomial"
-effect_sizes = [0, 2/3] # effect size in terms of the SD e.g. for SD 3 and effect size 2/3 it's modelling a reduction of 2
-effect_direction = "decrease" # "increase" if the effect is to decrease or an increase a value
+pre_mean = 4 # pre-treatment mean number of headache days per month
+sigma_epsilon = 3 # random error standard deviation - level of variability due to random factors i.e. day-to-day fluctuations e.g. due to factors like stress, physical activity, or measurement inaccuracies
+dist_type = "negative_binomial" # underlying distribution of the frequency data - empirical evidence indicates headache frequency mirrors a negative bionomial distribution
+effect_sizes = [0, 2/3] # effect size in terms of the SD e.g. for SD 3 and effect size 2/3 it's modelling a post-treatment reduction in headache frequency 2 headache days per month
+effect_direction = "decrease" # if the effect is to "decrease" or an "increase" a value
 include_severity_composite = 0
 
-n_pre = 12
-n_post = 12
+n_pre = 12 # number of observations sampled before treatment
+n_post = 12 # number of observations sampled after treatment
 
-n_simulations = 200
-n_bootstrap = 100
+n_simulations = 200 # how many patient diaries to simulatte
+n_bootstrap = 1000 # number of bootstrap resampling to do per patient
 
 conditions_key = ", ".join(map(str, (n_pre, n_post, pre_mean, sigma_epsilon, dist_type)))
 simulations = {}
 simulations = simulate_treatment_effect(pre_mean, sigma_epsilon, n_pre, n_post, dist_type, effect_sizes, effect_direction, n_simulations, n_bootstrap, simulations, include_severity_composite)
+
